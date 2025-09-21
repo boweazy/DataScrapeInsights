@@ -71,14 +71,16 @@ export default function Sidebar() {
   return (
     <div className="w-64 bg-card border-r border-border flex flex-col">
       {/* Logo/Brand */}
-      <div className="p-6 border-b border-border">
+      <div className="smartflow-gradient p-6 border-b border-border">
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <i className="fas fa-chart-line text-primary-foreground text-sm"></i>
+          <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-lg">
+            <i className="fas fa-chart-line text-sf-blue text-lg"></i>
           </div>
-          <h1 className="text-xl font-bold text-foreground">DataFlow</h1>
+          <div>
+            <h1 className="text-xl font-bold text-white">SmartFlow</h1>
+            <p className="text-xs text-blue-100">Systems Dashboard</p>
+          </div>
         </div>
-        <p className="text-sm text-muted-foreground mt-1">Product Data Intelligence</p>
       </div>
 
       {/* Navigation Menu */}
@@ -118,12 +120,12 @@ export default function Sidebar() {
       {/* User Profile */}
       <div className="p-4 border-t border-border">
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-            <span className="text-primary-foreground text-sm font-medium">JD</span>
+          <div className="w-8 h-8 smartflow-gradient rounded-full flex items-center justify-center">
+            <span className="text-white text-sm font-medium">SF</span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-foreground truncate">Jane Doe</p>
-            <p className="text-xs text-muted-foreground truncate">Product Manager</p>
+            <p className="text-sm font-medium text-foreground truncate">SmartFlow</p>
+            <p className="text-xs text-muted-foreground truncate">Admin User</p>
           </div>
           <Button
             variant="ghost"
