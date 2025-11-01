@@ -4,6 +4,7 @@ import { queryClient } from "@/lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { createContext, useContext, useEffect } from "react";
+import { initCircuitBackground } from "@/lib/circuit-background";
 
 import Dashboard from "@/pages/dashboard";
 import WebScraper from "@/pages/web-scraper";
@@ -47,9 +48,16 @@ function ThemeProvider({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
+  useEffect(() => {
+    // Initialize circuit background animation with cleanup
+    const cleanup = initCircuitBackground();
+    return cleanup; // Cleanup when component unmounts
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
+        <canvas id="circuit-canvas"></canvas>
         <Switch>
           <Route path="/" component={Dashboard} />
           <Route path="/scraper" component={WebScraper} />
