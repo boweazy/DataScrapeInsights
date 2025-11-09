@@ -13,6 +13,13 @@ import { CollaborationUtils } from "./collaboration-service";
 import { sendAlert, NotificationTemplates } from "./notification-service";
 import { getPerformanceMetrics, getErrorStats, apiRateLimiter, scraperRateLimiter, exportRateLimiter } from "./middleware";
 import { scheduleScraper, stopScraper, getScheduledJobs } from "./scheduler";
+import { predictMetrics, detectAnomalies, generateSmartRecommendations } from "./ml-analytics";
+import { registerWebhook, triggerWebhooks, IntegrationManager, IntegrationTemplates } from "./webhook-integrations";
+import { graphqlSchema, playgroundHTML } from "./graphql-api";
+import { graphqlHTTP } from "express-graphql";
+import { executePipeline, PipelineTemplates } from "./data-pipelines";
+import { PresenceManager, CollaborationManager } from "./realtime-collaboration";
+import { cache, CacheKeys, CacheInvalidation } from "./redis-cache";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -627,6 +634,192 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error sending notification:", error);
       res.status(500).json({ message: "Failed to send notification" });
+    }
+  });
+
+  // ============= EVEN MORE SICK FEATURES =============
+
+  // ML Predictions
+  app.get("/api/predictions", async (req, res) => {
+    try {
+      const { metric = 'activity_count', days = 7 } = req.query;
+      const prediction = await predictMetrics(metric as string, parseInt(days as string));
+      res.json(prediction);
+    } catch (error) {
+      console.error("Error generating prediction:", error);
+      res.status(500).json({ message: "Failed to generate prediction" });
+    }
+  });
+
+  // Anomaly Detection
+  app.get("/api/anomalies", async (req, res) => {
+    try {
+      const { threshold = 2.5 } = req.query;
+      const anomalies = await detectAnomalies(parseFloat(threshold as string));
+      res.json(anomalies);
+    } catch (error) {
+      console.error("Error detecting anomalies:", error);
+      res.status(500).json({ message: "Failed to detect anomalies" });
+    }
+  });
+
+  // Smart Recommendations
+  app.get("/api/recommendations", async (req, res) => {
+    try {
+      const recommendations = await generateSmartRecommendations();
+      res.json(recommendations);
+    } catch (error) {
+      console.error("Error generating recommendations:", error);
+      res.status(500).json({ message: "Failed to generate recommendations" });
+    }
+  });
+
+  // Webhook Management
+  app.post("/api/webhooks", async (req, res) => {
+    try {
+      const { url, events, secret, retryAttempts = 3 } = req.body;
+      const id = registerWebhook({ url, events, secret, enabled: true, retryAttempts });
+      res.json({ id, message: "Webhook registered successfully" });
+    } catch (error) {
+      console.error("Error registering webhook:", error);
+      res.status(500).json({ message: "Failed to register webhook" });
+    }
+  });
+
+  // Integration Notifications
+  app.post("/api/integrations/:name/notify", async (req, res) => {
+    try {
+      const { name } = req.params;
+      const message = req.body;
+      const sent = await IntegrationManager.notify(name, message);
+      res.json({ sent, message: sent ? "Notification sent" : "Failed to send notification" });
+    } catch (error) {
+      console.error("Error sending integration notification:", error);
+      res.status(500).json({ message: "Failed to send integration notification" });
+    }
+  });
+
+  // GraphQL API
+  app.use('/graphql', graphqlHTTP({
+    schema: graphqlSchema,
+    graphiql: false,
+  }));
+
+  // GraphQL Playground
+  app.get('/playground', (_req, res) => {
+    res.setHeader('Content-Type', 'text/html');
+    res.send(playgroundHTML);
+  });
+
+  // Data Pipeline Execution
+  app.post("/api/pipelines/execute", async (req, res) => {
+    try {
+      const { pipeline, data } = req.body;
+      const result = await executePipeline(pipeline, data);
+      res.json({ result, count: result.length });
+    } catch (error) {
+      console.error("Error executing pipeline:", error);
+      res.status(500).json({ message: "Failed to execute pipeline" });
+    }
+  });
+
+  // Pipeline Templates
+  app.get("/api/pipelines/templates", async (req, res) => {
+    try {
+      res.json(PipelineTemplates);
+    } catch (error) {
+      console.error("Error fetching pipeline templates:", error);
+      res.status(500).json({ message: "Failed to fetch pipeline templates" });
+    }
+  });
+
+  // Real-time Collaboration - Presence
+  app.post("/api/collaboration/presence", async (req, res) => {
+    try {
+      const { userId, page, cursor, selection } = req.body;
+      PresenceManager.updatePresence(userId, { page, cursor, selection });
+      res.json({ message: "Presence updated" });
+    } catch (error) {
+      console.error("Error updating presence:", error);
+      res.status(500).json({ message: "Failed to update presence" });
+    }
+  });
+
+  app.get("/api/collaboration/users", async (req, res) => {
+    try {
+      const { page } = req.query;
+      const users = page
+        ? PresenceManager.getUsersOnPage(page as string)
+        : PresenceManager.getActiveUsers();
+      res.json({ users });
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  // Document Locking
+  app.post("/api/collaboration/lock", async (req, res) => {
+    try {
+      const { documentId, userId } = req.body;
+      const locked = CollaborationManager.lockDocument(documentId, userId);
+      res.json({ locked, message: locked ? "Document locked" : "Document already locked" });
+    } catch (error) {
+      console.error("Error locking document:", error);
+      res.status(500).json({ message: "Failed to lock document" });
+    }
+  });
+
+  app.post("/api/collaboration/unlock", async (req, res) => {
+    try {
+      const { documentId, userId } = req.body;
+      const unlocked = CollaborationManager.unlockDocument(documentId, userId);
+      res.json({ unlocked, message: unlocked ? "Document unlocked" : "Failed to unlock" });
+    } catch (error) {
+      console.error("Error unlocking document:", error);
+      res.status(500).json({ message: "Failed to unlock document" });
+    }
+  });
+
+  // Redis Cache Management
+  app.post("/api/cache/invalidate", async (req, res) => {
+    try {
+      const { type } = req.body;
+
+      switch (type) {
+        case 'scraper':
+          await CacheInvalidation.onScraperChange();
+          break;
+        case 'query':
+          await CacheInvalidation.onQueryChange();
+          break;
+        case 'data':
+          await CacheInvalidation.onDataChange();
+          break;
+        case 'activity':
+          await CacheInvalidation.onActivityChange();
+          break;
+        case 'all':
+          await CacheInvalidation.all();
+          break;
+        default:
+          return res.status(400).json({ message: "Invalid cache type" });
+      }
+
+      res.json({ message: "Cache invalidated successfully" });
+    } catch (error) {
+      console.error("Error invalidating cache:", error);
+      res.status(500).json({ message: "Failed to invalidate cache" });
+    }
+  });
+
+  app.get("/api/cache/stats", async (req, res) => {
+    try {
+      const stats = await cache.getStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching cache stats:", error);
+      res.status(500).json({ message: "Failed to fetch cache stats" });
     }
   });
 
