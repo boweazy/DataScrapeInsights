@@ -20,6 +20,12 @@ import { graphqlHTTP } from "express-graphql";
 import { executePipeline, PipelineTemplates } from "./data-pipelines";
 import { PresenceManager, CollaborationManager } from "./realtime-collaboration";
 import { cache, CacheKeys, CacheInvalidation } from "./redis-cache";
+import { AIService, AutoTagService, ImageAnalysisService, SemanticSearchService } from "./advanced-ai";
+import { TwoFactorAuth, EncryptionService, PermissionManager, AuditLogger, Role } from "./advanced-security";
+import { createScheduledReport, deleteScheduledReport, getScheduledReports, generateAutomatedInsights, createAlertRule, createDashboardSnapshot, ReportTemplates } from "./scheduled-reports";
+import { ABTestManager, FeatureFlags } from "./ab-testing";
+import { saveVersion, getVersionHistory, restoreVersion, getDiff, recordAudit, getAuditTrail, createSnapshot, listSnapshots, restoreSnapshot } from "./data-versioning";
+import { createDashboard, updateDashboard, getDashboard, deleteDashboard, listDashboards, exportDashboard, importDashboard, shareDashboard, cloneDashboard, WidgetTemplates, DashboardThemes } from "./custom-dashboards";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -820,6 +826,640 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching cache stats:", error);
       res.status(500).json({ message: "Failed to fetch cache stats" });
+    }
+  });
+
+  // ============= ULTIMATE FEATURES =============
+
+  // Advanced AI - NLP Analysis
+  app.post("/api/ai/nlp-analysis", async (req, res) => {
+    try {
+      const { text } = req.body;
+      const analysis = await AIService.advancedNLPAnalysis(text);
+      res.json(analysis);
+    } catch (error) {
+      console.error("Error in NLP analysis:", error);
+      res.status(500).json({ message: "Failed to analyze text" });
+    }
+  });
+
+  // Advanced AI - Auto-tagging
+  app.post("/api/ai/auto-tag", async (req, res) => {
+    try {
+      const { content, context } = req.body;
+      const tags = await AutoTagService.generateTags(content, context);
+      res.json({ tags });
+    } catch (error) {
+      console.error("Error in auto-tagging:", error);
+      res.status(500).json({ message: "Failed to generate tags" });
+    }
+  });
+
+  // Advanced AI - Image Analysis
+  app.post("/api/ai/image-analysis", async (req, res) => {
+    try {
+      const { imageUrl } = req.body;
+      const analysis = await ImageAnalysisService.analyzeImage(imageUrl);
+      res.json(analysis);
+    } catch (error) {
+      console.error("Error in image analysis:", error);
+      res.status(500).json({ message: "Failed to analyze image" });
+    }
+  });
+
+  // Advanced AI - Semantic Search
+  app.post("/api/ai/semantic-search", async (req, res) => {
+    try {
+      const { query, documents } = req.body;
+      const results = await SemanticSearchService.search(query, documents);
+      res.json({ results });
+    } catch (error) {
+      console.error("Error in semantic search:", error);
+      res.status(500).json({ message: "Failed to perform semantic search" });
+    }
+  });
+
+  // Advanced AI - Smart Categorization
+  app.post("/api/ai/smart-categorize", async (req, res) => {
+    try {
+      const { content, categories } = req.body;
+      const result = await AIService.smartCategorization(content, categories);
+      res.json(result);
+    } catch (error) {
+      console.error("Error in categorization:", error);
+      res.status(500).json({ message: "Failed to categorize content" });
+    }
+  });
+
+  // Advanced AI - Entity Extraction
+  app.post("/api/ai/extract-entities", async (req, res) => {
+    try {
+      const { text } = req.body;
+      const entities = await AIService.extractEntities(text);
+      res.json({ entities });
+    } catch (error) {
+      console.error("Error in entity extraction:", error);
+      res.status(500).json({ message: "Failed to extract entities" });
+    }
+  });
+
+  // Advanced AI - Text Summarization
+  app.post("/api/ai/generate-summary", async (req, res) => {
+    try {
+      const { text, maxLength } = req.body;
+      const summary = await AIService.generateSummary(text, maxLength);
+      res.json({ summary });
+    } catch (error) {
+      console.error("Error in summarization:", error);
+      res.status(500).json({ message: "Failed to generate summary" });
+    }
+  });
+
+  // Advanced AI - Translation
+  app.post("/api/ai/translate", async (req, res) => {
+    try {
+      const { text, targetLanguage } = req.body;
+      const translation = await AIService.translateText(text, targetLanguage);
+      res.json({ translation });
+    } catch (error) {
+      console.error("Error in translation:", error);
+      res.status(500).json({ message: "Failed to translate text" });
+    }
+  });
+
+  // Advanced AI - Language Detection
+  app.post("/api/ai/detect-language", async (req, res) => {
+    try {
+      const { text } = req.body;
+      const language = await AIService.detectLanguage(text);
+      res.json({ language });
+    } catch (error) {
+      console.error("Error in language detection:", error);
+      res.status(500).json({ message: "Failed to detect language" });
+    }
+  });
+
+  // Advanced Security - Enable 2FA
+  app.post("/api/security/2fa/enable", async (req, res) => {
+    try {
+      const { userId } = req.body;
+      const result = TwoFactorAuth.setupTOTP(userId);
+      res.json(result);
+    } catch (error) {
+      console.error("Error enabling 2FA:", error);
+      res.status(500).json({ message: "Failed to enable 2FA" });
+    }
+  });
+
+  // Advanced Security - Verify 2FA
+  app.post("/api/security/2fa/verify", async (req, res) => {
+    try {
+      const { userId, token } = req.body;
+      const valid = TwoFactorAuth.verifyTOTP(userId, token);
+      res.json({ valid });
+    } catch (error) {
+      console.error("Error verifying 2FA:", error);
+      res.status(500).json({ message: "Failed to verify 2FA" });
+    }
+  });
+
+  // Advanced Security - Encrypt Data
+  app.post("/api/security/encrypt", async (req, res) => {
+    try {
+      const { text, key } = req.body;
+      const encryption = new EncryptionService(key);
+      const result = encryption.encrypt(text);
+      res.json(result);
+    } catch (error) {
+      console.error("Error encrypting data:", error);
+      res.status(500).json({ message: "Failed to encrypt data" });
+    }
+  });
+
+  // Advanced Security - Decrypt Data
+  app.post("/api/security/decrypt", async (req, res) => {
+    try {
+      const { encrypted, iv, tag, key } = req.body;
+      const encryption = new EncryptionService(key);
+      const decrypted = encryption.decrypt(encrypted, iv, tag);
+      res.json({ decrypted });
+    } catch (error) {
+      console.error("Error decrypting data:", error);
+      res.status(500).json({ message: "Failed to decrypt data" });
+    }
+  });
+
+  // Advanced Security - Check Permissions
+  app.post("/api/security/permissions/check", async (req, res) => {
+    try {
+      const { userId, permission } = req.body;
+      const hasPermission = PermissionManager.hasPermission(userId, permission as any);
+      res.json({ hasPermission });
+    } catch (error) {
+      console.error("Error checking permissions:", error);
+      res.status(500).json({ message: "Failed to check permissions" });
+    }
+  });
+
+  // Advanced Security - Get Audit Trail
+  app.get("/api/security/audit-trail", async (req, res) => {
+    try {
+      const { userId, action, limit = '50' } = req.query;
+      const trail = AuditLogger.getAuditTrail({
+        userId: userId as string,
+        action: action as string,
+        limit: parseInt(limit as string)
+      });
+      res.json({ trail });
+    } catch (error) {
+      console.error("Error fetching audit trail:", error);
+      res.status(500).json({ message: "Failed to fetch audit trail" });
+    }
+  });
+
+  // Scheduled Reports - Create
+  app.post("/api/reports/schedule", async (req, res) => {
+    try {
+      const { name, queryId, schedule, recipients, format, enabled } = req.body;
+      const id = await createScheduledReport({
+        name,
+        queryId: parseInt(queryId),
+        schedule,
+        recipients,
+        format,
+        enabled
+      });
+      res.json({ id, message: "Report scheduled successfully" });
+    } catch (error) {
+      console.error("Error scheduling report:", error);
+      res.status(500).json({ message: "Failed to schedule report" });
+    }
+  });
+
+  // Scheduled Reports - Delete
+  app.delete("/api/reports/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = deleteScheduledReport(id);
+      res.json({ deleted, message: deleted ? "Report deleted" : "Report not found" });
+    } catch (error) {
+      console.error("Error deleting report:", error);
+      res.status(500).json({ message: "Failed to delete report" });
+    }
+  });
+
+  // Scheduled Reports - List
+  app.get("/api/reports/scheduled", async (req, res) => {
+    try {
+      const reports = getScheduledReports();
+      res.json({ reports });
+    } catch (error) {
+      console.error("Error fetching reports:", error);
+      res.status(500).json({ message: "Failed to fetch reports" });
+    }
+  });
+
+  // Scheduled Reports - Templates
+  app.get("/api/reports/templates", async (req, res) => {
+    try {
+      res.json(ReportTemplates);
+    } catch (error) {
+      console.error("Error fetching templates:", error);
+      res.status(500).json({ message: "Failed to fetch templates" });
+    }
+  });
+
+  // Automated Insights
+  app.get("/api/insights/automated", async (req, res) => {
+    try {
+      const insights = await generateAutomatedInsights();
+      res.json({ insights });
+    } catch (error) {
+      console.error("Error generating insights:", error);
+      res.status(500).json({ message: "Failed to generate insights" });
+    }
+  });
+
+  // Alert Rules - Create
+  app.post("/api/alerts/rules", async (req, res) => {
+    try {
+      const { name, condition, threshold, window, severity, actions, enabled } = req.body;
+      const id = createAlertRule({
+        name,
+        condition,
+        threshold,
+        window,
+        severity,
+        actions,
+        enabled
+      });
+      res.json({ id, message: "Alert rule created" });
+    } catch (error) {
+      console.error("Error creating alert rule:", error);
+      res.status(500).json({ message: "Failed to create alert rule" });
+    }
+  });
+
+  // Dashboard Snapshots
+  app.post("/api/dashboards/:id/snapshot", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const snapshotId = await createDashboardSnapshot(id);
+      res.json({ snapshotId });
+    } catch (error) {
+      console.error("Error creating snapshot:", error);
+      res.status(500).json({ message: "Failed to create snapshot" });
+    }
+  });
+
+  // A/B Testing - Create Test
+  app.post("/api/ab-tests/create", async (req, res) => {
+    try {
+      const { name, description, variants, startDate, endDate } = req.body;
+      const id = ABTestManager.createTest({
+        name,
+        description,
+        variants,
+        startDate: new Date(startDate),
+        endDate: new Date(endDate)
+      });
+      res.json({ id, message: "A/B test created" });
+    } catch (error) {
+      console.error("Error creating A/B test:", error);
+      res.status(500).json({ message: "Failed to create A/B test" });
+    }
+  });
+
+  // A/B Testing - Get Variant
+  app.get("/api/ab-tests/:id/variant", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { userId } = req.query;
+      const variant = ABTestManager.getVariantForUser(id, userId as string);
+      res.json({ variant });
+    } catch (error) {
+      console.error("Error getting variant:", error);
+      res.status(500).json({ message: "Failed to get variant" });
+    }
+  });
+
+  // A/B Testing - Track Event
+  app.post("/api/ab-tests/:id/event", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { userId, variantId, eventType, value } = req.body;
+      ABTestManager.trackEvent(id, userId, variantId, eventType, value);
+      res.json({ message: "Event tracked" });
+    } catch (error) {
+      console.error("Error tracking event:", error);
+      res.status(500).json({ message: "Failed to track event" });
+    }
+  });
+
+  // A/B Testing - Get Results
+  app.get("/api/ab-tests/:id/results", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const results = ABTestManager.getTestResults(id);
+      res.json(results);
+    } catch (error) {
+      console.error("Error getting test results:", error);
+      res.status(500).json({ message: "Failed to get test results" });
+    }
+  });
+
+  // Feature Flags - Set Flag
+  app.post("/api/feature-flags/set", async (req, res) => {
+    try {
+      const { flag, enabled, rollout, conditions } = req.body;
+      FeatureFlags.setFlag(flag, { enabled, rollout, conditions });
+      res.json({ message: "Feature flag updated" });
+    } catch (error) {
+      console.error("Error setting feature flag:", error);
+      res.status(500).json({ message: "Failed to set feature flag" });
+    }
+  });
+
+  // Feature Flags - Check Flag
+  app.get("/api/feature-flags/check", async (req, res) => {
+    try {
+      const { flag, userId } = req.query;
+      const enabled = FeatureFlags.isEnabled(flag as string, userId as string);
+      res.json({ flag, enabled });
+    } catch (error) {
+      console.error("Error checking feature flag:", error);
+      res.status(500).json({ message: "Failed to check feature flag" });
+    }
+  });
+
+  // Feature Flags - List All
+  app.get("/api/feature-flags", async (req, res) => {
+    try {
+      const flags = FeatureFlags.getAllFlags();
+      res.json({ flags });
+    } catch (error) {
+      console.error("Error fetching feature flags:", error);
+      res.status(500).json({ message: "Failed to fetch feature flags" });
+    }
+  });
+
+  // Data Versioning - Save Version
+  app.post("/api/versioning/save", async (req, res) => {
+    try {
+      const { resourceType, resourceId, data, userId, comment } = req.body;
+      const versionId = saveVersion(resourceType, resourceId, data, userId, comment);
+      res.json({ versionId });
+    } catch (error) {
+      console.error("Error saving version:", error);
+      res.status(500).json({ message: "Failed to save version" });
+    }
+  });
+
+  // Data Versioning - Get History
+  app.get("/api/versioning/:type/:id/history", async (req, res) => {
+    try {
+      const { type, id } = req.params;
+      const history = getVersionHistory(type, id);
+      res.json({ history });
+    } catch (error) {
+      console.error("Error fetching version history:", error);
+      res.status(500).json({ message: "Failed to fetch version history" });
+    }
+  });
+
+  // Data Versioning - Restore Version
+  app.post("/api/versioning/:type/:id/restore", async (req, res) => {
+    try {
+      const { type, id } = req.params;
+      const { versionNumber } = req.body;
+      const restored = restoreVersion(type, id, versionNumber);
+      res.json({ restored, message: restored ? "Version restored" : "Version not found" });
+    } catch (error) {
+      console.error("Error restoring version:", error);
+      res.status(500).json({ message: "Failed to restore version" });
+    }
+  });
+
+  // Data Versioning - Get Diff
+  app.get("/api/versioning/:type/:id/diff", async (req, res) => {
+    try {
+      const { type, id } = req.params;
+      const { from, to } = req.query;
+      const diff = getDiff(type, id, parseInt(from as string), parseInt(to as string));
+      res.json({ diff });
+    } catch (error) {
+      console.error("Error calculating diff:", error);
+      res.status(500).json({ message: "Failed to calculate diff" });
+    }
+  });
+
+  // Audit Trail - Record Event
+  app.post("/api/audit/record", async (req, res) => {
+    try {
+      const { userId, action, resourceType, resourceId, changes, ipAddress, userAgent } = req.body;
+      recordAudit({ userId, action, resourceType, resourceId, changes, ipAddress, userAgent });
+      res.json({ message: "Audit event recorded" });
+    } catch (error) {
+      console.error("Error recording audit:", error);
+      res.status(500).json({ message: "Failed to record audit event" });
+    }
+  });
+
+  // Audit Trail - Get Trail
+  app.get("/api/audit/trail", async (req, res) => {
+    try {
+      const { userId, resourceType, action, limit = '100' } = req.query;
+      const trail = getAuditTrail({
+        userId: userId as string,
+        resourceType: resourceType as string,
+        action: action as string,
+        limit: parseInt(limit as string)
+      });
+      res.json({ trail });
+    } catch (error) {
+      console.error("Error fetching audit trail:", error);
+      res.status(500).json({ message: "Failed to fetch audit trail" });
+    }
+  });
+
+  // Data Snapshots - Create
+  app.post("/api/versioning/:type/:id/snapshot", async (req, res) => {
+    try {
+      const { type, id } = req.params;
+      const { name } = req.body;
+      const snapshotId = createSnapshot(type, id, name);
+      res.json({ snapshotId });
+    } catch (error) {
+      console.error("Error creating snapshot:", error);
+      res.status(500).json({ message: "Failed to create snapshot" });
+    }
+  });
+
+  // Data Snapshots - List
+  app.get("/api/versioning/:type/:id/snapshots", async (req, res) => {
+    try {
+      const { type, id } = req.params;
+      const snapshots = listSnapshots(type, id);
+      res.json({ snapshots });
+    } catch (error) {
+      console.error("Error listing snapshots:", error);
+      res.status(500).json({ message: "Failed to list snapshots" });
+    }
+  });
+
+  // Data Snapshots - Restore
+  app.post("/api/versioning/:type/:id/snapshots/:snapshotId/restore", async (req, res) => {
+    try {
+      const { type, id, snapshotId } = req.params;
+      const restored = restoreSnapshot(type, id, snapshotId);
+      res.json({ restored, message: restored ? "Snapshot restored" : "Snapshot not found" });
+    } catch (error) {
+      console.error("Error restoring snapshot:", error);
+      res.status(500).json({ message: "Failed to restore snapshot" });
+    }
+  });
+
+  // Custom Dashboards - Create
+  app.post("/api/dashboards/custom", async (req, res) => {
+    try {
+      const { name, description, widgets, layout, theme, filters, permissions } = req.body;
+      const id = createDashboard({
+        name,
+        description,
+        widgets,
+        layout,
+        theme,
+        filters,
+        permissions
+      });
+      res.json({ id, message: "Dashboard created" });
+    } catch (error) {
+      console.error("Error creating dashboard:", error);
+      res.status(500).json({ message: "Failed to create dashboard" });
+    }
+  });
+
+  // Custom Dashboards - Update
+  app.put("/api/dashboards/custom/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      const updated = updateDashboard(id, updates);
+      res.json({ updated, message: updated ? "Dashboard updated" : "Dashboard not found" });
+    } catch (error) {
+      console.error("Error updating dashboard:", error);
+      res.status(500).json({ message: "Failed to update dashboard" });
+    }
+  });
+
+  // Custom Dashboards - Get
+  app.get("/api/dashboards/custom/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const dashboard = getDashboard(id);
+      if (!dashboard) {
+        return res.status(404).json({ message: "Dashboard not found" });
+      }
+      res.json(dashboard);
+    } catch (error) {
+      console.error("Error fetching dashboard:", error);
+      res.status(500).json({ message: "Failed to fetch dashboard" });
+    }
+  });
+
+  // Custom Dashboards - Delete
+  app.delete("/api/dashboards/custom/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = deleteDashboard(id);
+      res.json({ deleted, message: deleted ? "Dashboard deleted" : "Dashboard not found" });
+    } catch (error) {
+      console.error("Error deleting dashboard:", error);
+      res.status(500).json({ message: "Failed to delete dashboard" });
+    }
+  });
+
+  // Custom Dashboards - List
+  app.get("/api/dashboards/custom", async (req, res) => {
+    try {
+      const { userId = 'user@example.com' } = req.query; // TODO: Get from auth
+      const dashboards = listDashboards(userId as string);
+      res.json({ dashboards });
+    } catch (error) {
+      console.error("Error listing dashboards:", error);
+      res.status(500).json({ message: "Failed to list dashboards" });
+    }
+  });
+
+  // Custom Dashboards - Export
+  app.post("/api/dashboards/custom/:id/export", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const json = exportDashboard(id);
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="dashboard-${id}.json"`);
+      res.send(json);
+    } catch (error) {
+      console.error("Error exporting dashboard:", error);
+      res.status(500).json({ message: "Failed to export dashboard" });
+    }
+  });
+
+  // Custom Dashboards - Import
+  app.post("/api/dashboards/custom/import", async (req, res) => {
+    try {
+      const { json, userId = 'user@example.com' } = req.body; // TODO: Get from auth
+      const id = importDashboard(json, userId);
+      res.json({ id, message: "Dashboard imported" });
+    } catch (error) {
+      console.error("Error importing dashboard:", error);
+      res.status(500).json({ message: "Failed to import dashboard" });
+    }
+  });
+
+  // Custom Dashboards - Share
+  app.post("/api/dashboards/custom/:id/share", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { users, permission } = req.body;
+      const shared = shareDashboard(id, users, permission);
+      res.json({ shared, message: shared ? "Dashboard shared" : "Dashboard not found" });
+    } catch (error) {
+      console.error("Error sharing dashboard:", error);
+      res.status(500).json({ message: "Failed to share dashboard" });
+    }
+  });
+
+  // Custom Dashboards - Clone
+  app.post("/api/dashboards/custom/:id/clone", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { newName, userId = 'user@example.com' } = req.body; // TODO: Get from auth
+      const clonedId = cloneDashboard(id, newName, userId);
+      res.json({ id: clonedId, message: "Dashboard cloned" });
+    } catch (error) {
+      console.error("Error cloning dashboard:", error);
+      res.status(500).json({ message: "Failed to clone dashboard" });
+    }
+  });
+
+  // Custom Dashboards - Widget Templates
+  app.get("/api/dashboards/widget-templates", async (req, res) => {
+    try {
+      res.json(WidgetTemplates);
+    } catch (error) {
+      console.error("Error fetching widget templates:", error);
+      res.status(500).json({ message: "Failed to fetch widget templates" });
+    }
+  });
+
+  // Custom Dashboards - Theme Templates
+  app.get("/api/dashboards/themes", async (req, res) => {
+    try {
+      res.json(DashboardThemes);
+    } catch (error) {
+      console.error("Error fetching dashboard themes:", error);
+      res.status(500).json({ message: "Failed to fetch themes" });
     }
   });
 
