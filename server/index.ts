@@ -1,6 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { initializeWebSocket } from "./websocket";
+import { initializeScheduler, shutdownScheduler } from "./scheduler";
 
 const app = express();
 app.use(express.json());
@@ -39,6 +41,14 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
+  // Initialize WebSocket for real-time updates
+  initializeWebSocket(server);
+  log("WebSocket initialized for real-time updates");
+
+  // Initialize background job scheduler
+  await initializeScheduler();
+  log("Background job scheduler initialized");
+
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
@@ -66,5 +76,24 @@ app.use((req, res, next) => {
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
+  });
+
+  // Graceful shutdown
+  process.on('SIGTERM', () => {
+    log('SIGTERM received, shutting down gracefully');
+    shutdownScheduler();
+    server.close(() => {
+      log('Server closed');
+      process.exit(0);
+    });
+  });
+
+  process.on('SIGINT', () => {
+    log('SIGINT received, shutting down gracefully');
+    shutdownScheduler();
+    server.close(() => {
+      log('Server closed');
+      process.exit(0);
+    });
   });
 })();
