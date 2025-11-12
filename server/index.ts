@@ -1,10 +1,19 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { helmetConfig, corsConfig, sanitizeInput } from "./middleware/security";
 
 const app = express();
+
+// Security middleware
+app.use(helmetConfig);
+app.use(corsConfig);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Input sanitization
+app.use(sanitizeInput);
 
 app.use((req, res, next) => {
   const start = Date.now();
