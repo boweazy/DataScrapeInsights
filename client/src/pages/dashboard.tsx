@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import Sidebar from "@/components/layout/sidebar";
+import GitHubSidebar from "@/components/dashboard/GitHubSidebar";
 import StatsGrid from "@/components/dashboard/stats-grid";
 import NLSQLInterface from "@/components/dashboard/nl-sql-interface";
 import QuickActions from "@/components/dashboard/quick-actions";
@@ -14,12 +14,13 @@ export default function Dashboard() {
   });
 
   return (
-    <div className="flex h-screen circuit-pattern">
-      <Sidebar />
-      
-      <div className="flex-1 flex flex-col overflow-hidden">
+    <div className="min-h-screen bg-[#F5F5DC] circuit-pattern">
+      {/* GitHub-style Sidebar */}
+      <GitHubSidebar />
+
+      <div className="flex flex-col">
         {/* Top Header */}
-        <header className="smartflow-header px-6 py-4">
+        <header className="smartflow-header px-6 py-4 mt-16">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold text-foreground flex items-center">
@@ -49,7 +50,7 @@ export default function Dashboard() {
         </header>
 
         {/* Content Area */}
-        <main className="flex-1 overflow-auto p-6">
+        <main className="overflow-auto p-6 max-w-7xl mx-auto w-full">
           {/* Stats Overview */}
           <StatsGrid stats={stats as any} isLoading={statsLoading} />
 
