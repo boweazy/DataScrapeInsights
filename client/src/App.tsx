@@ -17,6 +17,7 @@ import Help from "@/pages/help";
 import NotFound from "@/pages/not-found";
 import CommandPalette from "@/components/CommandPalette";
 import KeyboardShortcuts from "@/components/KeyboardShortcuts";
+import { ToastContainer } from "@/components/RichToast";
 
 // Theme context
 const ThemeContext = createContext<{
@@ -74,6 +75,7 @@ function App() {
           <Route component={NotFound} />
         </Switch>
         <Toaster />
+        <ToastContainer />
       </ThemeProvider>
     </QueryClientProvider>
   );

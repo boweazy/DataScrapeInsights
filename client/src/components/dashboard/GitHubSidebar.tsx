@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, Menu, Sun, Moon } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import { useTheme } from '@/App';
+import NotificationCenter from '@/components/NotificationCenter';
 
 export default function GitHubSidebar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -129,6 +130,7 @@ export default function GitHubSidebar() {
               <p className="text-sm font-medium text-[#F5F5DC] truncate">SmartFlow</p>
               <p className="text-xs text-[#F5F5DC]/70 truncate">Admin User</p>
             </div>
+            <NotificationCenter />
             <button
               onClick={toggleTheme}
               className="p-2 text-[#FFD700] hover:text-[#E6C200] hover:bg-[#3B2F2F] rounded transition-colors"
