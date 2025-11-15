@@ -15,6 +15,8 @@ import Exports from "@/pages/exports";
 import Settings from "@/pages/settings";
 import Help from "@/pages/help";
 import NotFound from "@/pages/not-found";
+import CommandPalette from "@/components/CommandPalette";
+import KeyboardShortcuts from "@/components/KeyboardShortcuts";
 
 // Theme context
 const ThemeContext = createContext<{
@@ -58,6 +60,8 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <canvas id="circuit-canvas"></canvas>
+        <CommandPalette />
+        <KeyboardShortcuts />
         <Switch>
           <Route path="/" component={Dashboard} />
           <Route path="/scraper" component={WebScraper} />
